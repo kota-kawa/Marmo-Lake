@@ -5,6 +5,7 @@ import {
   Briefcase,
   CheckCircle2,
   ChevronLeft,
+  Circle,
   ClipboardList,
   ExternalLink,
   FileText,
@@ -15,9 +16,12 @@ import {
   MessageSquare,
   Plus,
   RefreshCw,
+  Search,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   Upload,
+  Wifi,
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -58,6 +62,41 @@ const icons: Record<string, ReactElement> = {
   files: <Archive />,
   ai: <Bot />,
   bell: <Bell />,
+}
+
+const standardApps = [
+  { key: 'home', label: 'ホーム', icon: <LayoutDashboard />, tint: 'blue' },
+  { key: 'notes', label: 'メモ', icon: <MessageSquare />, tint: 'yellow' },
+  { key: 'announcements', label: 'お知らせ', icon: <Bell />, tint: 'red' },
+  { key: 'checklists', label: 'チェック', icon: <ClipboardList />, tint: 'orange' },
+  { key: 'files', label: '書類棚', icon: <Archive />, tint: 'teal' },
+  { key: 'ai', label: 'AI', icon: <Bot />, tint: 'purple' },
+] as const
+
+function AppleLogo() {
+  return (
+    <svg viewBox="0 0 14 16" className="apple-logo" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M11.6 8.5c0-1.6 1.3-2.4 1.4-2.4-.8-1.1-2-1.3-2.4-1.3-1-.1-2 .6-2.5.6s-1.3-.6-2.2-.6c-1.1 0-2.2.7-2.8 1.7-1.2 2.1-.3 5.2.9 6.9.6.8 1.2 1.8 2.1 1.7.9 0 1.2-.6 2.2-.6s1.3.6 2.2.6c.9 0 1.5-.8 2.1-1.7.7-1 .9-2 .9-2-.1 0-1.8-.7-1.8-2.6zM9.9 3.4c.5-.6.8-1.4.7-2.2-.7 0-1.5.5-2 1-.4.5-.8 1.3-.7 2 .8.1 1.5-.4 2-.8z"
+      />
+    </svg>
+  )
+}
+
+function MenuClock() {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(new Date()), 15000)
+    return () => window.clearInterval(id)
+  }, [])
+  const date = new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' }).format(now)
+  const time = new Intl.DateTimeFormat('ja-JP', { hour: '2-digit', minute: '2-digit', hour12: false }).format(now)
+  return (
+    <span className="menubar-clock">
+      {date} {time}
+    </span>
+  )
 }
 
 export function App() {
@@ -105,6 +144,11 @@ export function App() {
     void bootstrap()
   }, [bootstrap])
 
+  const goStaff = (key: StandardApp = 'home') => {
+    setView('staff')
+    setActivePane({ type: 'standard', key })
+  }
+
   if (!isReady) {
     return <Splash />
   }
@@ -121,94 +165,198 @@ export function App() {
     )
   }
 
+  const activeKey: StandardApp | 'admin' | null =
+    view === 'admin' || view === 'admin-login'
+      ? 'admin'
+      : activePane.type === 'standard'
+        ? activePane.key
+        : null
+
   return (
-    <div className="app-shell">
-      <div className="lake-bg" aria-hidden="true" />
-      <TopBar
+    <div className="desktop">
+      <div className="wallpaper" aria-hidden="true" />
+      <MenuBar
         workspace={data.workspace}
         view={view}
-        onStaff={() => {
-          setView('staff')
-          setActivePane({ type: 'standard', key: 'home' })
-        }}
+        sectionLabel={
+          view === 'admin' || view === 'admin-login'
+            ? '管理'
+            : activePane.type === 'work-app'
+              ? activePane.app.name
+              : standardApps.find((a) => a.key === activeKey)?.label || 'ホーム'
+        }
+        onRefresh={() => void loadData()}
+      />
+
+      <div className="stage">
+        {view === 'staff' && (
+          <StaffWorkspace
+            data={data}
+            activePane={activePane}
+            setActivePane={setActivePane}
+            reload={loadData}
+            showToast={showToast}
+            openAdmin={() => setView('admin-login')}
+          />
+        )}
+        {view === 'admin-login' && (
+          <AdminLogin
+            onBack={() => setView('staff')}
+            onLoggedIn={async () => {
+              await loadData()
+              setView('admin')
+            }}
+          />
+        )}
+        {view === 'admin' && (
+          <AdminDashboard
+            data={data}
+            reload={loadData}
+            showToast={showToast}
+            onStaff={() => goStaff()}
+            onLogout={async () => {
+              await postJson('/session/logout', {})
+              setView('staff')
+            }}
+          />
+        )}
+      </div>
+
+      <Dock
+        activeKey={activeKey}
+        onApp={(key) => goStaff(key)}
         onAdmin={() => setView(view === 'admin' ? 'staff' : 'admin-login')}
         onRefresh={() => void loadData()}
       />
-      {view === 'staff' && (
-        <StaffWorkspace
-          data={data}
-          activePane={activePane}
-          setActivePane={setActivePane}
-          reload={loadData}
-          showToast={showToast}
-          openAdmin={() => setView('admin-login')}
-        />
-      )}
-      {view === 'admin-login' && (
-        <AdminLogin
-          onBack={() => setView('staff')}
-          onLoggedIn={async () => {
-            await loadData()
-            setView('admin')
-          }}
-        />
-      )}
-      {view === 'admin' && (
-        <AdminDashboard
-          data={data}
-          reload={loadData}
-          showToast={showToast}
-          onLogout={async () => {
-            await postJson('/session/logout', {})
-            setView('staff')
-          }}
-        />
-      )}
+
       {toast && <div className="toast">{toast}</div>}
+    </div>
+  )
+}
+
+function MenuBar({
+  workspace,
+  sectionLabel,
+  onRefresh,
+}: {
+  workspace: Workspace | null
+  view: View
+  sectionLabel: string
+  onRefresh: () => void
+}) {
+  const menus = ['ファイル', '編集', '表示', '移動', 'ウインドウ', 'ヘルプ']
+  return (
+    <header className="menubar">
+      <div className="menubar-left">
+        <button className="menubar-item menubar-apple" aria-label="Apple">
+          <AppleLogo />
+        </button>
+        <button className="menubar-item menubar-app">{workspace?.name || 'Marmo Lake'}</button>
+        <span className="menubar-section">{sectionLabel}</span>
+        {menus.map((m) => (
+          <button key={m} className="menubar-item">
+            {m}
+          </button>
+        ))}
+      </div>
+      <div className="menubar-right">
+        <button className="menubar-status" onClick={onRefresh} aria-label="更新" title="更新">
+          <RefreshCw />
+        </button>
+        <span className="menubar-status">
+          <Wifi />
+        </span>
+        <span className="menubar-status battery" aria-hidden="true">
+          <span className="battery-shell">
+            <span className="battery-level" />
+          </span>
+        </span>
+        <span className="menubar-status">
+          <Search />
+        </span>
+        <span className="menubar-status">
+          <SlidersHorizontal />
+        </span>
+        <MenuClock />
+      </div>
+    </header>
+  )
+}
+
+function Dock({
+  activeKey,
+  onApp,
+  onAdmin,
+  onRefresh,
+}: {
+  activeKey: StandardApp | 'admin' | null
+  onApp: (key: StandardApp) => void
+  onAdmin: () => void
+  onRefresh: () => void
+}) {
+  return (
+    <nav className="dock" aria-label="Dock">
+      <div className="dock-tray">
+        {standardApps.map((app) => (
+          <button
+            key={app.key}
+            className="dock-item"
+            data-label={app.label}
+            onClick={() => onApp(app.key)}
+            aria-label={app.label}
+          >
+            <span className={`dock-icon tint-${app.tint}`}>{app.icon}</span>
+            <span className={activeKey === app.key ? 'dock-dot on' : 'dock-dot'} />
+          </button>
+        ))}
+        <span className="dock-sep" />
+        <button className="dock-item" data-label="更新" onClick={onRefresh} aria-label="更新">
+          <span className="dock-icon tint-graphite">
+            <RefreshCw />
+          </span>
+          <span className="dock-dot" />
+        </button>
+        <button className="dock-item" data-label="管理" onClick={onAdmin} aria-label="管理">
+          <span className="dock-icon tint-graphite">
+            <Settings />
+          </span>
+          <span className={activeKey === 'admin' ? 'dock-dot on' : 'dock-dot'} />
+        </button>
+      </div>
+    </nav>
+  )
+}
+
+function MacWindow({ sidebar, children }: { sidebar: ReactNode; children: ReactNode }) {
+  return (
+    <div className="mac-window">
+      <aside className="window-sidebar">
+        <div className="traffic-lights" aria-hidden="true">
+          <span className="tl tl-close" />
+          <span className="tl tl-min" />
+          <span className="tl tl-max" />
+        </div>
+        <div className="sidebar-scroll">{sidebar}</div>
+      </aside>
+      <main className="window-main">{children}</main>
     </div>
   )
 }
 
 function Splash() {
   return (
-    <main className="app-shell center-screen">
-      <div className="lake-bg" aria-hidden="true" />
-      <section className="glass splash">
-        <Sparkles />
+    <div className="desktop center-screen">
+      <div className="wallpaper" aria-hidden="true" />
+      <section className="splash">
+        <span className="splash-mark">
+          <Sparkles />
+        </span>
         <h1>Marmo Lake</h1>
+        <div className="splash-bar">
+          <span />
+        </div>
       </section>
-    </main>
-  )
-}
-
-function TopBar({
-  workspace,
-  view,
-  onStaff,
-  onAdmin,
-  onRefresh,
-}: {
-  workspace: Workspace | null
-  view: View
-  onStaff: () => void
-  onAdmin: () => void
-  onRefresh: () => void
-}) {
-  return (
-    <header className="top-bar glass">
-      <button className="brand" onClick={onStaff} aria-label="スタッフホーム">
-        <span className="brand-mark">ML</span>
-        <span>{workspace?.name || 'Marmo Lake'}</span>
-      </button>
-      <nav className="top-actions">
-        <button className="icon-button" onClick={onRefresh} aria-label="更新">
-          <RefreshCw />
-        </button>
-        <button className="icon-button" onClick={onAdmin} aria-label="管理">
-          {view === 'admin' ? <Home /> : <Lock />}
-        </button>
-      </nav>
-    </header>
+    </div>
   )
 }
 
@@ -256,15 +404,15 @@ function SetupWizard({ onComplete }: { onComplete: () => void }) {
   }
 
   return (
-    <main className="app-shell setup-screen">
-      <div className="lake-bg" aria-hidden="true" />
-      <form className="glass setup-card" onSubmit={submit}>
+    <div className="desktop center-screen">
+      <div className="wallpaper" aria-hidden="true" />
+      <form className="sheet setup-card" onSubmit={submit}>
         <div className="setup-heading">
-          <span className="brand-mark">ML</span>
-          <div>
-            <h1>Marmo Lake</h1>
-            <p>最初のワークスペースを作成</p>
-          </div>
+          <span className="setup-mark">
+            <Sparkles />
+          </span>
+          <h1>Marmo Lake へようこそ</h1>
+          <p>最初のワークスペースを作成します</p>
         </div>
 
         <div className="field-grid">
@@ -311,7 +459,7 @@ function SetupWizard({ onComplete }: { onComplete: () => void }) {
 
         <div className="inline-panel">
           <label>
-            <span>AI</span>
+            <span>AI 連携</span>
             <select
               value={form.ai_provider}
               onChange={(event) => setForm({ ...form, ai_provider: event.target.value })}
@@ -355,10 +503,10 @@ function SetupWizard({ onComplete }: { onComplete: () => void }) {
 
         {error && <p className="error-text">{error}</p>}
         <button className="primary-button" disabled={saving}>
-          {saving ? '作成中' : '開始'}
+          {saving ? '作成中…' : '続ける'}
         </button>
       </form>
-    </main>
+    </div>
   )
 }
 
@@ -377,45 +525,60 @@ function StaffWorkspace({
   showToast: (message: string) => void
   openAdmin: () => void
 }) {
-  const standardApps = [
-    { key: 'home', label: 'ホーム', icon: <LayoutDashboard /> },
-    { key: 'notes', label: 'メモ', icon: <MessageSquare /> },
-    { key: 'announcements', label: 'お知らせ', icon: <Bell /> },
-    { key: 'checklists', label: 'チェック', icon: <ClipboardList /> },
-    { key: 'files', label: '書類棚', icon: <Archive /> },
-    { key: 'ai', label: 'AI', icon: <Bot /> },
-  ] as const
+  const sidebar = (
+    <>
+      <div className="sidebar-group-title">スタッフ</div>
+      {standardApps.map((item) => (
+        <button
+          key={item.key}
+          className={
+            activePane.type === 'standard' && activePane.key === item.key
+              ? 'sidebar-row active'
+              : 'sidebar-row'
+          }
+          onClick={() => setActivePane({ type: 'standard', key: item.key })}
+        >
+          <span className={`sidebar-badge tint-${item.tint}`}>{item.icon}</span>
+          <span className="sidebar-label">{item.label}</span>
+        </button>
+      ))}
+      {data.workApps.length > 0 && (
+        <>
+          <div className="sidebar-group-title">業務</div>
+          {data.workApps.map((app) => (
+            <button
+              key={app.id}
+              className={
+                activePane.type === 'work-app' && activePane.app.id === app.id
+                  ? 'sidebar-row active'
+                  : 'sidebar-row'
+              }
+              onClick={() => setActivePane({ type: 'work-app', app })}
+            >
+              <span className="sidebar-badge tint-graphite">{icons[app.icon] || <Briefcase />}</span>
+              <span className="sidebar-label">{app.name}</span>
+            </button>
+          ))}
+        </>
+      )}
+    </>
+  )
 
   return (
-    <main className="workspace">
-      <aside className="dock glass" aria-label="ランチャー">
-        {standardApps.map((item) => (
-          <button
-            key={item.key}
-            className={activePane.type === 'standard' && activePane.key === item.key ? 'active' : ''}
-            onClick={() => setActivePane({ type: 'standard', key: item.key })}
-            title={item.label}
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </button>
-        ))}
-      </aside>
-      <section className="main-stage glass">
-        {activePane.type === 'work-app' ? (
-          <WorkAppViewer app={activePane.app} onClose={() => setActivePane({ type: 'standard', key: 'home' })} />
-        ) : (
-          <StandardPane
-            pane={activePane.key}
-            data={data}
-            setActivePane={setActivePane}
-            reload={reload}
-            showToast={showToast}
-            openAdmin={openAdmin}
-          />
-        )}
-      </section>
-    </main>
+    <MacWindow sidebar={sidebar}>
+      {activePane.type === 'work-app' ? (
+        <WorkAppViewer app={activePane.app} onClose={() => setActivePane({ type: 'standard', key: 'home' })} />
+      ) : (
+        <StandardPane
+          pane={activePane.key}
+          data={data}
+          setActivePane={setActivePane}
+          reload={reload}
+          showToast={showToast}
+          openAdmin={openAdmin}
+        />
+      )}
+    </MacWindow>
   )
 }
 
@@ -465,6 +628,18 @@ function StandardPane({
   )
 }
 
+function Toolbar({ title, subtitle, actions }: { title: string; subtitle?: string; actions?: ReactNode }) {
+  return (
+    <div className="window-toolbar">
+      <div className="toolbar-title">
+        <h1>{title}</h1>
+        {subtitle && <span>{subtitle}</span>}
+      </div>
+      {actions && <div className="toolbar-actions">{actions}</div>}
+    </div>
+  )
+}
+
 function HomePane({
   data,
   setActivePane,
@@ -475,72 +650,82 @@ function HomePane({
   const importantAnnouncement = data.announcements.find((item) => item.priority === 'important')
   const pinnedNotes = data.notes.filter((note) => note.is_pinned).slice(0, 2)
   const firstChecklist = data.checklists[0]
+  const today = new Intl.DateTimeFormat('ja-JP', { dateStyle: 'full' }).format(new Date())
 
   return (
-    <div className="pane">
-      <div className="pane-title">
-        <h1>今日</h1>
-        <span>{new Intl.DateTimeFormat('ja-JP', { dateStyle: 'medium' }).format(new Date())}</span>
-      </div>
-      <div className="dashboard-grid">
-        {importantAnnouncement && (
-          <article className="dashboard-card accent">
-            <Bell />
-            <h2>{importantAnnouncement.title}</h2>
-            <p>{importantAnnouncement.body}</p>
-          </article>
-        )}
-        {pinnedNotes.map((note) => (
-          <article className="dashboard-card" key={note.id}>
-            <MessageSquare />
-            <h2>{note.title}</h2>
-            <p>{note.body}</p>
-          </article>
-        ))}
-        {firstChecklist && (
-          <article className="dashboard-card">
-            <ClipboardList />
-            <h2>{firstChecklist.title}</h2>
-            <p>
-              {firstChecklist.items.filter((item) => item.is_done).length}/{firstChecklist.items.length}
-            </p>
-          </article>
-        )}
-      </div>
-      <section className="section-block">
-        <h2>業務</h2>
-        <div className="app-grid">
-          {data.workApps.length === 0 && (
-            <div className="empty-state">
-              <Briefcase />
-              <p>管理画面から業務画面を追加できます。</p>
-            </div>
+    <>
+      <Toolbar title="今日" subtitle={today} />
+      <div className="pane">
+        <div className="dashboard-grid">
+          {importantAnnouncement && (
+            <article className="dashboard-card accent">
+              <span className="card-glyph tint-red">
+                <Bell />
+              </span>
+              <h2>{importantAnnouncement.title}</h2>
+              <p>{importantAnnouncement.body}</p>
+            </article>
           )}
-          {data.workApps.map((app) => (
-            <button key={app.id} className="app-tile" onClick={() => setActivePane({ type: 'work-app', app })}>
-              {icons[app.icon] || <Briefcase />}
-              <strong>{app.name}</strong>
-              <span>{app.category}</span>
-            </button>
+          {pinnedNotes.map((note) => (
+            <article className="dashboard-card" key={note.id}>
+              <span className="card-glyph tint-yellow">
+                <MessageSquare />
+              </span>
+              <h2>{note.title}</h2>
+              <p>{note.body}</p>
+            </article>
           ))}
+          {firstChecklist && (
+            <article className="dashboard-card">
+              <span className="card-glyph tint-orange">
+                <ClipboardList />
+              </span>
+              <h2>{firstChecklist.title}</h2>
+              <p>
+                完了 {firstChecklist.items.filter((item) => item.is_done).length} / {firstChecklist.items.length}
+              </p>
+            </article>
+          )}
         </div>
-      </section>
-    </div>
+        <section className="section-block">
+          <h2 className="section-heading">業務</h2>
+          <div className="app-grid">
+            {data.workApps.length === 0 && (
+              <div className="empty-state">
+                <Briefcase />
+                <p>管理画面から業務画面を追加できます。</p>
+              </div>
+            )}
+            {data.workApps.map((app) => (
+              <button key={app.id} className="app-tile" onClick={() => setActivePane({ type: 'work-app', app })}>
+                <span className="tile-glyph tint-graphite">{icons[app.icon] || <Briefcase />}</span>
+                <strong>{app.name}</strong>
+                <span className="tile-sub">{app.category}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
+    </>
   )
 }
 
 function WorkAppViewer({ app, onClose }: { app: WorkApp; onClose: () => void }) {
   const openExternal = () => window.open(app.url, '_blank', 'noopener,noreferrer')
   return (
-    <div className="viewer">
-      <div className="viewer-bar">
-        <button className="icon-button" onClick={onClose} aria-label="戻る">
+    <>
+      <div className="window-toolbar">
+        <button className="toolbar-button" onClick={onClose} aria-label="戻る">
           <ChevronLeft />
         </button>
-        <strong>{app.name}</strong>
-        <button className="icon-button" onClick={openExternal} aria-label="外部で開く">
-          <ExternalLink />
-        </button>
+        <div className="toolbar-title center">
+          <h1>{app.name}</h1>
+        </div>
+        <div className="toolbar-actions">
+          <button className="toolbar-button" onClick={openExternal} aria-label="外部で開く">
+            <ExternalLink />
+          </button>
+        </div>
       </div>
       {app.display_mode === 'embed' ? (
         <div className="iframe-shell">
@@ -551,51 +736,57 @@ function WorkAppViewer({ app, onClose }: { app: WorkApp; onClose: () => void }) 
           </div>
         </div>
       ) : (
-        <div className="external-panel">
-          <Briefcase />
+        <div className="pane external-panel">
+          <span className="card-glyph tint-graphite big">
+            <Briefcase />
+          </span>
           <h2>{app.name}</h2>
+          <p className="muted">{app.url}</p>
           <button className="primary-button" onClick={openExternal}>
             開く
           </button>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
 function NotesPane({ notes }: { notes: Note[] }) {
   return (
-    <div className="pane">
-      <div className="pane-title">
-        <h1>メモ</h1>
+    <>
+      <Toolbar title="メモ" subtitle={`${notes.length}件`} />
+      <div className="pane">
+        <div className="list-grid">
+          {notes.map((note) => (
+            <article className="content-card note-card" key={note.id}>
+              <h2>{note.title}</h2>
+              <p>{note.body}</p>
+            </article>
+          ))}
+        </div>
       </div>
-      <div className="list-grid">
-        {notes.map((note) => (
-          <article className="content-card" key={note.id}>
-            <h2>{note.title}</h2>
-            <p>{note.body}</p>
-          </article>
-        ))}
-      </div>
-    </div>
+    </>
   )
 }
 
 function AnnouncementsPane({ announcements }: { announcements: Announcement[] }) {
   return (
-    <div className="pane">
-      <div className="pane-title">
-        <h1>お知らせ</h1>
+    <>
+      <Toolbar title="お知らせ" subtitle={`${announcements.length}件`} />
+      <div className="pane">
+        <div className="list-grid">
+          {announcements.map((announcement) => (
+            <article
+              className={`content-card ${announcement.priority === 'important' ? 'accent-line' : ''}`}
+              key={announcement.id}
+            >
+              <h2>{announcement.title}</h2>
+              <p>{announcement.body}</p>
+            </article>
+          ))}
+        </div>
       </div>
-      <div className="list-grid">
-        {announcements.map((announcement) => (
-          <article className={`content-card ${announcement.priority === 'important' ? 'accent-line' : ''}`} key={announcement.id}>
-            <h2>{announcement.title}</h2>
-            <p>{announcement.body}</p>
-          </article>
-        ))}
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -615,43 +806,49 @@ function ChecklistPane({
   }
 
   return (
-    <div className="pane">
-      <div className="pane-title">
-        <h1>チェック</h1>
+    <>
+      <Toolbar title="チェック" subtitle={`${checklists.length}件`} />
+      <div className="pane">
+        <div className="list-grid">
+          {checklists.map((checklist) => (
+            <article className="content-card checklist-card" key={checklist.id}>
+              <h2>{checklist.title}</h2>
+              {checklist.items.map((item) => (
+                <button
+                  key={item.id}
+                  className={item.is_done ? 'check-row done' : 'check-row'}
+                  onClick={() => void toggleItem(checklist, item)}
+                >
+                  {item.is_done ? <CheckCircle2 /> : <Circle />}
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </article>
+          ))}
+        </div>
       </div>
-      <div className="list-grid">
-        {checklists.map((checklist) => (
-          <article className="content-card checklist-card" key={checklist.id}>
-            <h2>{checklist.title}</h2>
-            {checklist.items.map((item) => (
-              <button key={item.id} className={item.is_done ? 'check-row done' : 'check-row'} onClick={() => void toggleItem(checklist, item)}>
-                <CheckCircle2 />
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </article>
-        ))}
-      </div>
-    </div>
+    </>
   )
 }
 
 function FilesPane({ files }: { files: FileItem[] }) {
   return (
-    <div className="pane">
-      <div className="pane-title">
-        <h1>書類棚</h1>
+    <>
+      <Toolbar title="書類棚" subtitle={`${files.length}件`} />
+      <div className="pane">
+        <div className="app-grid file-grid">
+          {files.map((file) => (
+            <a className="app-tile" href={`/api/files/${file.id}`} target="_blank" rel="noreferrer" key={file.id}>
+              <span className="tile-glyph tint-blue">
+                <FileText />
+              </span>
+              <strong>{file.name}</strong>
+              <span className="tile-sub">{file.category}</span>
+            </a>
+          ))}
+        </div>
       </div>
-      <div className="app-grid file-grid">
-        {files.map((file) => (
-          <a className="app-tile" href={`/api/files/${file.id}`} target="_blank" rel="noreferrer" key={file.id}>
-            <FileText />
-            <strong>{file.name}</strong>
-            <span>{file.category}</span>
-          </a>
-        ))}
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -713,58 +910,67 @@ function AIHelp({
 
   if (!provider) {
     return (
-      <div className="pane ai-pane">
-        <div className="empty-state">
-          <Bot />
-          <h1>AI未設定</h1>
-          <button className="primary-button" onClick={openAdmin}>
-            設定
-          </button>
+      <>
+        <Toolbar title="AI" />
+        <div className="pane">
+          <div className="empty-state">
+            <Bot />
+            <p>AI はまだ設定されていません。</p>
+            <button className="primary-button" onClick={openAdmin}>
+              設定する
+            </button>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="pane ai-pane">
-      <div className="pane-title">
-        <h1>AI</h1>
-        <span>{provider.display_name}</span>
-      </div>
-      <form className="ai-box" onSubmit={chat}>
-        <label>
-          <span>質問</span>
-          <textarea value={message} onChange={(event) => setMessage(event.target.value)} required />
-        </label>
-        <small>送信: {contextSummary}</small>
-        <button className="primary-button" disabled={busy || !message.trim()}>
-          送信
-        </button>
-      </form>
-      {reply && <article className="content-card ai-reply">{reply}</article>}
-      <form className="ai-box" onSubmit={plan}>
-        <label>
-          <span>操作</span>
-          <input
-            value={actionPrompt}
-            onChange={(event) => setActionPrompt(event.target.value)}
-            placeholder="開店チェックを完了"
-          />
-        </label>
-        <button>提案</button>
-      </form>
-      <div className="list-grid">
-        {proposals.map((proposal) => (
-          <article className="content-card" key={`${proposal.action_key}-${proposal.title}`}>
-            <h2>{proposal.title}</h2>
-            <p>{proposal.summary}</p>
-            <button className={proposal.requires_confirmation ? 'primary-button' : ''} onClick={() => void execute(proposal)}>
-              {proposal.requires_confirmation ? '確認して実行' : '実行'}
+    <>
+      <Toolbar title="AI" subtitle={provider.display_name} />
+      <div className="pane ai-pane">
+        <form className="ai-box" onSubmit={chat}>
+          <label>
+            <span>質問</span>
+            <textarea value={message} onChange={(event) => setMessage(event.target.value)} required />
+          </label>
+          <div className="ai-row">
+            <small>送信: {contextSummary}</small>
+            <button className="primary-button" disabled={busy || !message.trim()}>
+              送信
             </button>
-          </article>
-        ))}
+          </div>
+        </form>
+        {reply && <article className="content-card ai-reply">{reply}</article>}
+        <form className="ai-box" onSubmit={plan}>
+          <label>
+            <span>操作を依頼</span>
+            <input
+              value={actionPrompt}
+              onChange={(event) => setActionPrompt(event.target.value)}
+              placeholder="開店チェックを完了"
+            />
+          </label>
+          <div className="ai-row end">
+            <button className="secondary-button">提案を見る</button>
+          </div>
+        </form>
+        <div className="list-grid">
+          {proposals.map((proposal) => (
+            <article className="content-card" key={`${proposal.action_key}-${proposal.title}`}>
+              <h2>{proposal.title}</h2>
+              <p>{proposal.summary}</p>
+              <button
+                className={proposal.requires_confirmation ? 'primary-button' : 'secondary-button'}
+                onClick={() => void execute(proposal)}
+              >
+                {proposal.requires_confirmation ? '確認して実行' : '実行'}
+              </button>
+            </article>
+          ))}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
@@ -784,13 +990,16 @@ function AdminLogin({ onBack, onLoggedIn }: { onBack: () => void; onLoggedIn: ()
   }
 
   return (
-    <main className="admin-login">
-      <form className="glass login-card" onSubmit={submit}>
-        <button type="button" className="icon-button" onClick={onBack} aria-label="戻る">
+    <div className="login-stage">
+      <form className="sheet login-card" onSubmit={submit}>
+        <button type="button" className="toolbar-button sheet-close" onClick={onBack} aria-label="閉じる">
           <X />
         </button>
-        <Lock />
-        <h1>管理</h1>
+        <span className="login-mark">
+          <Lock />
+        </span>
+        <h1>管理者ログイン</h1>
+        <p className="muted">続行するにはパスワードを入力してください</p>
         <input
           type="password"
           value={password}
@@ -799,9 +1008,9 @@ function AdminLogin({ onBack, onLoggedIn }: { onBack: () => void; onLoggedIn: ()
           placeholder="パスワード"
         />
         {error && <p className="error-text">{error}</p>}
-        <button className="primary-button">入る</button>
+        <button className="primary-button">ログイン</button>
       </form>
-    </main>
+    </div>
   )
 }
 
@@ -809,45 +1018,64 @@ function AdminDashboard({
   data,
   reload,
   showToast,
+  onStaff,
   onLogout,
 }: {
   data: AppData
   reload: () => Promise<void>
   showToast: (message: string) => void
+  onStaff: () => void
   onLogout: () => Promise<void>
 }) {
   const [tab, setTab] = useState<'apps' | 'share' | 'checks' | 'files' | 'ai' | 'settings'>('apps')
 
-  return (
-    <main className="admin-layout">
-      <aside className="admin-nav glass">
-        {[
-          ['apps', <Briefcase />, '画面'],
-          ['share', <MessageSquare />, '共有'],
-          ['checks', <ClipboardList />, 'チェック'],
-          ['files', <Archive />, '書類'],
-          ['ai', <Bot />, 'AI'],
-          ['settings', <Settings />, '設定'],
-        ].map(([key, icon, label]) => (
-          <button key={key as string} className={tab === key ? 'active' : ''} onClick={() => setTab(key as typeof tab)}>
-            {icon as ReactElement}
-            <span>{label as string}</span>
-          </button>
-        ))}
-        <button onClick={() => void onLogout()}>
-          <LogOut />
-          <span>退出</span>
+  const tabs = [
+    ['apps', <Briefcase />, '業務画面', 'blue'],
+    ['share', <MessageSquare />, '共有', 'yellow'],
+    ['checks', <ClipboardList />, 'チェック', 'orange'],
+    ['files', <Archive />, '書類', 'teal'],
+    ['ai', <Bot />, 'AI', 'purple'],
+    ['settings', <Settings />, '設定', 'graphite'],
+  ] as const
+
+  const sidebar = (
+    <>
+      <div className="sidebar-group-title">管理</div>
+      {tabs.map(([key, icon, label, tint]) => (
+        <button
+          key={key}
+          className={tab === key ? 'sidebar-row active' : 'sidebar-row'}
+          onClick={() => setTab(key)}
+        >
+          <span className={`sidebar-badge tint-${tint}`}>{icon}</span>
+          <span className="sidebar-label">{label}</span>
         </button>
-      </aside>
-      <section className="admin-panel glass">
-        {tab === 'apps' && <AdminApps data={data} reload={reload} showToast={showToast} />}
-        {tab === 'share' && <AdminShare data={data} reload={reload} showToast={showToast} />}
-        {tab === 'checks' && <AdminChecks data={data} reload={reload} showToast={showToast} />}
-        {tab === 'files' && <AdminFiles data={data} reload={reload} showToast={showToast} />}
-        {tab === 'ai' && <AdminAI data={data} reload={reload} showToast={showToast} />}
-        {tab === 'settings' && <AdminSettings data={data} reload={reload} showToast={showToast} />}
-      </section>
-    </main>
+      ))}
+      <div className="sidebar-spacer" />
+      <button className="sidebar-row" onClick={onStaff}>
+        <span className="sidebar-badge tint-blue">
+          <Home />
+        </span>
+        <span className="sidebar-label">スタッフ画面</span>
+      </button>
+      <button className="sidebar-row" onClick={() => void onLogout()}>
+        <span className="sidebar-badge tint-red">
+          <LogOut />
+        </span>
+        <span className="sidebar-label">退出</span>
+      </button>
+    </>
+  )
+
+  return (
+    <MacWindow sidebar={sidebar}>
+      {tab === 'apps' && <AdminApps data={data} reload={reload} showToast={showToast} />}
+      {tab === 'share' && <AdminShare data={data} reload={reload} showToast={showToast} />}
+      {tab === 'checks' && <AdminChecks data={data} reload={reload} showToast={showToast} />}
+      {tab === 'files' && <AdminFiles data={data} reload={reload} showToast={showToast} />}
+      {tab === 'ai' && <AdminAI data={data} reload={reload} showToast={showToast} />}
+      {tab === 'settings' && <AdminSettings data={data} reload={reload} showToast={showToast} />}
+    </MacWindow>
   )
 }
 
@@ -870,29 +1098,36 @@ function AdminApps({ data, reload, showToast }: AdminProps) {
   }
 
   return (
-    <div className="admin-section">
-      <h1>業務画面</h1>
-      <form className="admin-form" onSubmit={submit}>
-        <input placeholder="名前" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
-        <input placeholder="URL" value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} required />
-        <input placeholder="カテゴリ" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
-        <select value={form.display_mode} onChange={(event) => setForm({ ...form, display_mode: event.target.value })}>
-          <option value="embed">画面内</option>
-          <option value="external">外部</option>
-        </select>
-        <button className="primary-button">
-          <Plus /> 追加
-        </button>
-      </form>
-      <AdminList>
-        {data.workApps.map((app) => (
-          <AdminRow key={app.id} title={app.name} subtitle={app.url} onDelete={async () => {
-            await deleteRequest(`/work-apps/${app.id}`)
-            await reload()
-          }} />
-        ))}
-      </AdminList>
-    </div>
+    <>
+      <Toolbar title="業務画面" />
+      <div className="pane">
+        <form className="admin-form" onSubmit={submit}>
+          <input placeholder="名前" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required />
+          <input placeholder="URL" value={form.url} onChange={(event) => setForm({ ...form, url: event.target.value })} required />
+          <input placeholder="カテゴリ" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} />
+          <select value={form.display_mode} onChange={(event) => setForm({ ...form, display_mode: event.target.value })}>
+            <option value="embed">画面内</option>
+            <option value="external">外部</option>
+          </select>
+          <button className="primary-button">
+            <Plus /> 追加
+          </button>
+        </form>
+        <AdminList>
+          {data.workApps.map((app) => (
+            <AdminRow
+              key={app.id}
+              title={app.name}
+              subtitle={app.url}
+              onDelete={async () => {
+                await deleteRequest(`/work-apps/${app.id}`)
+                await reload()
+              }}
+            />
+          ))}
+        </AdminList>
+      </div>
+    </>
   )
 }
 
@@ -907,129 +1142,156 @@ function AdminShare({ data, reload, showToast }: AdminProps) {
   const [announcement, setAnnouncement] = useState({ title: '', body: '', priority: 'important', is_visible: true })
 
   return (
-    <div className="admin-section two-columns">
-      <div>
-        <h1>メモ</h1>
-        <form
-          className="admin-form vertical"
-          onSubmit={async (event) => {
-            event.preventDefault()
-            await postJson('/notes', note)
-            setNote({ ...note, title: '', body: '' })
-            await reload()
-            showToast('保存しました')
-          }}
-        >
-          <input placeholder="タイトル" value={note.title} onChange={(event) => setNote({ ...note, title: event.target.value })} required />
-          <textarea placeholder="本文" value={note.body} onChange={(event) => setNote({ ...note, body: event.target.value })} />
-          <button className="primary-button">保存</button>
-        </form>
-        <AdminList>
-          {data.notes.map((item) => (
-            <AdminRow key={item.id} title={item.title} subtitle={item.body} onDelete={async () => {
-              await deleteRequest(`/notes/${item.id}`)
+    <>
+      <Toolbar title="共有" />
+      <div className="pane two-columns">
+        <div>
+          <h2 className="section-heading">メモ</h2>
+          <form
+            className="admin-form vertical"
+            onSubmit={async (event) => {
+              event.preventDefault()
+              await postJson('/notes', note)
+              setNote({ ...note, title: '', body: '' })
               await reload()
-            }} />
-          ))}
-        </AdminList>
-      </div>
-      <div>
-        <h1>お知らせ</h1>
-        <form
-          className="admin-form vertical"
-          onSubmit={async (event) => {
-            event.preventDefault()
-            await postJson('/announcements', announcement)
-            setAnnouncement({ ...announcement, title: '', body: '' })
-            await reload()
-            showToast('保存しました')
-          }}
-        >
-          <input placeholder="タイトル" value={announcement.title} onChange={(event) => setAnnouncement({ ...announcement, title: event.target.value })} required />
-          <textarea placeholder="本文" value={announcement.body} onChange={(event) => setAnnouncement({ ...announcement, body: event.target.value })} />
-          <button className="primary-button">保存</button>
-        </form>
-        <AdminList>
-          {data.announcements.map((item) => (
-            <AdminRow key={item.id} title={item.title} subtitle={item.body} onDelete={async () => {
-              await deleteRequest(`/announcements/${item.id}`)
+              showToast('保存しました')
+            }}
+          >
+            <input placeholder="タイトル" value={note.title} onChange={(event) => setNote({ ...note, title: event.target.value })} required />
+            <textarea placeholder="本文" value={note.body} onChange={(event) => setNote({ ...note, body: event.target.value })} />
+            <button className="primary-button">保存</button>
+          </form>
+          <AdminList>
+            {data.notes.map((item) => (
+              <AdminRow
+                key={item.id}
+                title={item.title}
+                subtitle={item.body}
+                onDelete={async () => {
+                  await deleteRequest(`/notes/${item.id}`)
+                  await reload()
+                }}
+              />
+            ))}
+          </AdminList>
+        </div>
+        <div>
+          <h2 className="section-heading">お知らせ</h2>
+          <form
+            className="admin-form vertical"
+            onSubmit={async (event) => {
+              event.preventDefault()
+              await postJson('/announcements', announcement)
+              setAnnouncement({ ...announcement, title: '', body: '' })
               await reload()
-            }} />
-          ))}
-        </AdminList>
+              showToast('保存しました')
+            }}
+          >
+            <input placeholder="タイトル" value={announcement.title} onChange={(event) => setAnnouncement({ ...announcement, title: event.target.value })} required />
+            <textarea placeholder="本文" value={announcement.body} onChange={(event) => setAnnouncement({ ...announcement, body: event.target.value })} />
+            <button className="primary-button">保存</button>
+          </form>
+          <AdminList>
+            {data.announcements.map((item) => (
+              <AdminRow
+                key={item.id}
+                title={item.title}
+                subtitle={item.body}
+                onDelete={async () => {
+                  await deleteRequest(`/announcements/${item.id}`)
+                  await reload()
+                }}
+              />
+            ))}
+          </AdminList>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 
 function AdminChecks({ data, reload, showToast }: AdminProps) {
   const [form, setForm] = useState({ title: '', description: '', items: '確認する\n片付ける' })
   return (
-    <div className="admin-section">
-      <h1>チェック</h1>
-      <form
-        className="admin-form vertical"
-        onSubmit={async (event) => {
-          event.preventDefault()
-          await postJson('/checklists', {
-            title: form.title,
-            description: form.description,
-            items: form.items.split('\n').map((item) => item.trim()).filter(Boolean),
-            is_staff_visible: true,
-          })
-          setForm({ title: '', description: '', items: '' })
-          await reload()
-          showToast('作成しました')
-        }}
-      >
-        <input placeholder="タイトル" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required />
-        <textarea placeholder="項目を1行ずつ" value={form.items} onChange={(event) => setForm({ ...form, items: event.target.value })} />
-        <button className="primary-button">作成</button>
-      </form>
-      <AdminList>
-        {data.checklists.map((item) => (
-          <AdminRow key={item.id} title={item.title} subtitle={`${item.items.length}項目`} onDelete={async () => {
-            await deleteRequest(`/checklists/${item.id}`)
+    <>
+      <Toolbar title="チェック" />
+      <div className="pane">
+        <form
+          className="admin-form vertical"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            await postJson('/checklists', {
+              title: form.title,
+              description: form.description,
+              items: form.items.split('\n').map((item) => item.trim()).filter(Boolean),
+              is_staff_visible: true,
+            })
+            setForm({ title: '', description: '', items: '' })
             await reload()
-          }} />
-        ))}
-      </AdminList>
-    </div>
+            showToast('作成しました')
+          }}
+        >
+          <input placeholder="タイトル" value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} required />
+          <textarea placeholder="項目を1行ずつ" value={form.items} onChange={(event) => setForm({ ...form, items: event.target.value })} />
+          <button className="primary-button">作成</button>
+        </form>
+        <AdminList>
+          {data.checklists.map((item) => (
+            <AdminRow
+              key={item.id}
+              title={item.title}
+              subtitle={`${item.items.length}項目`}
+              onDelete={async () => {
+                await deleteRequest(`/checklists/${item.id}`)
+                await reload()
+              }}
+            />
+          ))}
+        </AdminList>
+      </div>
+    </>
   )
 }
 
 function AdminFiles({ data, reload, showToast }: AdminProps) {
   const [file, setFile] = useState<File | null>(null)
   return (
-    <div className="admin-section">
-      <h1>書類棚</h1>
-      <form
-        className="admin-form"
-        onSubmit={async (event) => {
-          event.preventDefault()
-          if (!file) return
-          const body = new FormData()
-          body.append('upload', file)
-          await apiFetch('/files/upload?category=書類&is_staff_visible=true', { method: 'POST', body })
-          setFile(null)
-          await reload()
-          showToast('アップロードしました')
-        }}
-      >
-        <input type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} />
-        <button className="primary-button">
-          <Upload /> 登録
-        </button>
-      </form>
-      <AdminList>
-        {data.files.map((item) => (
-          <AdminRow key={item.id} title={item.name} subtitle={item.category} onDelete={async () => {
-            await deleteRequest(`/files/${item.id}`)
+    <>
+      <Toolbar title="書類" />
+      <div className="pane">
+        <form
+          className="admin-form"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            if (!file) return
+            const body = new FormData()
+            body.append('upload', file)
+            await apiFetch('/files/upload?category=書類&is_staff_visible=true', { method: 'POST', body })
+            setFile(null)
             await reload()
-          }} />
-        ))}
-      </AdminList>
-    </div>
+            showToast('アップロードしました')
+          }}
+        >
+          <input type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} />
+          <button className="primary-button">
+            <Upload /> 登録
+          </button>
+        </form>
+        <AdminList>
+          {data.files.map((item) => (
+            <AdminRow
+              key={item.id}
+              title={item.name}
+              subtitle={item.category}
+              onDelete={async () => {
+                await deleteRequest(`/files/${item.id}`)
+                await reload()
+              }}
+            />
+          ))}
+        </AdminList>
+      </div>
+    </>
   )
 }
 
@@ -1044,78 +1306,83 @@ function AdminAI({ data, reload, showToast }: AdminProps) {
     is_enabled: true,
   })
   return (
-    <div className="admin-section">
-      <h1>AI</h1>
-      <form
-        className="admin-form"
-        onSubmit={async (event) => {
-          event.preventDefault()
-          await postJson('/ai/providers', form)
-          setForm({ ...form, api_key: '' })
-          await reload()
-          showToast('設定しました')
-        }}
-      >
-        <select value={form.provider} onChange={(event) => setForm({ ...form, provider: event.target.value })}>
-          <option value="openai_compatible">OpenAI互換</option>
-          <option value="ollama">Ollama</option>
-        </select>
-        <input placeholder="Endpoint" value={form.endpoint_url} onChange={(event) => setForm({ ...form, endpoint_url: event.target.value })} />
-        <input placeholder="Model" value={form.model} onChange={(event) => setForm({ ...form, model: event.target.value })} />
-        {form.provider === 'openai_compatible' && (
-          <input type="password" placeholder="API Key" value={form.api_key} onChange={(event) => setForm({ ...form, api_key: event.target.value })} />
-        )}
-        <button className="primary-button">保存</button>
-      </form>
-      <AdminList>
-        {data.providers.map((provider) => (
-          <div className="admin-row" key={provider.id}>
-            <div>
-              <strong>{provider.display_name}</strong>
-              <span>{provider.model || provider.provider}</span>
+    <>
+      <Toolbar title="AI" />
+      <div className="pane">
+        <form
+          className="admin-form"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            await postJson('/ai/providers', form)
+            setForm({ ...form, api_key: '' })
+            await reload()
+            showToast('設定しました')
+          }}
+        >
+          <select value={form.provider} onChange={(event) => setForm({ ...form, provider: event.target.value })}>
+            <option value="openai_compatible">OpenAI互換</option>
+            <option value="ollama">Ollama</option>
+          </select>
+          <input placeholder="Endpoint" value={form.endpoint_url} onChange={(event) => setForm({ ...form, endpoint_url: event.target.value })} />
+          <input placeholder="Model" value={form.model} onChange={(event) => setForm({ ...form, model: event.target.value })} />
+          {form.provider === 'openai_compatible' && (
+            <input type="password" placeholder="API Key" value={form.api_key} onChange={(event) => setForm({ ...form, api_key: event.target.value })} />
+          )}
+          <button className="primary-button">保存</button>
+        </form>
+        <AdminList>
+          {data.providers.map((provider) => (
+            <div className="admin-row" key={provider.id}>
+              <div>
+                <strong>{provider.display_name}</strong>
+                <span>{provider.model || provider.provider}</span>
+              </div>
+              <button
+                className="secondary-button"
+                onClick={async () => {
+                  await postJson(`/ai/providers/${provider.id}/test`, {})
+                  showToast('接続できました')
+                }}
+              >
+                テスト
+              </button>
             </div>
-            <button
-              onClick={async () => {
-                await postJson(`/ai/providers/${provider.id}/test`, {})
-                showToast('接続できました')
-              }}
-            >
-              Test
-            </button>
-          </div>
-        ))}
-      </AdminList>
-    </div>
+          ))}
+        </AdminList>
+      </div>
+    </>
   )
 }
 
 function AdminSettings({ data, reload, showToast }: AdminProps) {
   const [workspaceName, setWorkspaceName] = useState(data.workspace?.name || '')
   return (
-    <div className="admin-section">
-      <h1>設定</h1>
-      <form
-        className="admin-form"
-        onSubmit={async (event) => {
-          event.preventDefault()
-          await patchJson('/workspace', { name: workspaceName })
-          await reload()
-          showToast('更新しました')
-        }}
-      >
-        <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} />
-        <button className="primary-button">保存</button>
-      </form>
-      <button
-        className="primary-button"
-        onClick={async () => {
-          const backup = await postJson<{ filename: string }>('/backup/create', {})
-          showToast(`${backup.filename} を作成`)
-        }}
-      >
-        設定をエクスポート
-      </button>
-    </div>
+    <>
+      <Toolbar title="設定" />
+      <div className="pane">
+        <form
+          className="admin-form"
+          onSubmit={async (event) => {
+            event.preventDefault()
+            await patchJson('/workspace', { name: workspaceName })
+            await reload()
+            showToast('更新しました')
+          }}
+        >
+          <input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} />
+          <button className="primary-button">保存</button>
+        </form>
+        <button
+          className="secondary-button"
+          onClick={async () => {
+            const backup = await postJson<{ filename: string }>('/backup/create', {})
+            showToast(`${backup.filename} を作成`)
+          }}
+        >
+          設定をエクスポート
+        </button>
+      </div>
+    </>
   )
 }
 
@@ -1138,7 +1405,9 @@ function AdminRow({
         <strong>{title}</strong>
         <span>{subtitle}</span>
       </div>
-      <button onClick={() => void onDelete()}>削除</button>
+      <button className="danger-button" onClick={() => void onDelete()}>
+        削除
+      </button>
     </div>
   )
 }

@@ -6,6 +6,24 @@ V1 focuses on one practical job: create a staff home screen on a local PC, then 
 
 ## Quick Start
 
+### Docker Compose
+
+```bash
+docker compose up --build
+```
+
+Open `http://localhost:8080`.
+
+To use another port:
+
+```bash
+MARMO_WEB_PORT=5173 docker compose up --build
+```
+
+Runtime data is stored in the `marmo-data` Docker volume.
+
+### Local Development
+
 ```bash
 npm install
 cd apps/api
@@ -69,4 +87,3 @@ Do not commit this directory's runtime contents.
 - [AI Settings](docs/ai-settings.md)
 - [Security Guide](docs/security-guide.md)
 - [Custom Local Web App Guide](docs/custom-local-web-app-guide.md)
-
