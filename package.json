@@ -1,0 +1,32 @@
+{
+  "name": "marmo-lake",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Marmo Lake local-first workspace for shops, classrooms, and small teams.",
+  "workspaces": [
+    "apps/web"
+  ],
+  "overrides": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd apps/api && if [ -x .venv/bin/python ]; then .venv/bin/python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000; else python3 -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000; fi",
+    "dev:web": "npm --workspace apps/web run dev -- --host 127.0.0.1",
+    "build": "npm --workspace apps/web run build",
+    "lint": "npm --workspace apps/web run lint",
+    "typecheck": "npm --workspace apps/web run typecheck",
+    "test": "npm --workspace apps/web run test -- --run",
+    "test:api": "cd apps/api && if [ -x .venv/bin/pytest ]; then .venv/bin/pytest; else pytest; fi",
+    "test:e2e": "playwright test",
+    "format:api": "cd apps/api && if [ -x .venv/bin/ruff ]; then .venv/bin/ruff format app; else ruff format app; fi",
+    "lint:api": "cd apps/api && if [ -x .venv/bin/ruff ]; then .venv/bin/ruff check app; else ruff check app; fi"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.61.1",
+    "concurrently": "10.0.3",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  }
+}
