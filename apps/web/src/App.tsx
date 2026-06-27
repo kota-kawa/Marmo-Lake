@@ -25,7 +25,7 @@ import {
   X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { FormEvent, ReactElement, ReactNode } from 'react'
+import type { FormEvent, KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode } from 'react'
 import { apiFetch, deleteRequest, patchJson, postJson } from './api'
 import type {
   AIActionProposal,
@@ -106,6 +106,7 @@ export function App() {
   const [activePane, setActivePane] = useState<ActivePane>({ type: 'standard', key: 'home' })
   const [data, setData] = useState<AppData>(emptyData)
   const [toast, setToast] = useState('')
+  const [paletteOpen, setPaletteOpen] = useState(false)
 
   const showToast = (message: string) => {
     setToast(message)
@@ -149,6 +150,24 @@ export function App() {
     setActivePane({ type: 'standard', key })
   }
 
+  const openTarget = (target: ActivePane) => {
+    setView('staff')
+    setActivePane(target)
+  }
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setPaletteOpen((open) => !open)
+      } else if (event.key === 'Escape') {
+        setPaletteOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   if (!isReady) {
     return <Splash />
   }
@@ -185,7 +204,22 @@ export function App() {
               ? activePane.app.name
               : standardApps.find((a) => a.key === activeKey)?.label || 'ホーム'
         }
+        onSearch={() => setPaletteOpen(true)}
         onRefresh={() => void loadData()}
+      />
+
+      <MobileBar
+        workspace={data.workspace}
+        sectionLabel={
+          view === 'admin' || view === 'admin-login'
+            ? '管理'
+            : activePane.type === 'work-app'
+              ? activePane.app.name
+              : standardApps.find((a) => a.key === activeKey)?.label || 'ホーム'
+        }
+        onSearch={() => setPaletteOpen(true)}
+        onAdmin={() => setView(view === 'admin' ? 'staff' : 'admin-login')}
+        isAdmin={view === 'admin'}
       />
 
       <div className="stage">
@@ -229,6 +263,17 @@ export function App() {
         onRefresh={() => void loadData()}
       />
 
+      {paletteOpen && (
+        <CommandPalette
+          data={data}
+          onClose={() => setPaletteOpen(false)}
+          onSelect={(target) => {
+            openTarget(target)
+            setPaletteOpen(false)
+          }}
+        />
+      )}
+
       {toast && <div className="toast">{toast}</div>}
     </div>
   )
@@ -237,11 +282,13 @@ export function App() {
 function MenuBar({
   workspace,
   sectionLabel,
+  onSearch,
   onRefresh,
 }: {
   workspace: Workspace | null
   view: View
   sectionLabel: string
+  onSearch: () => void
   onRefresh: () => void
 }) {
   const menus = ['ファイル', '編集', '表示', '移動', 'ウインドウ', 'ヘルプ']
@@ -271,15 +318,199 @@ function MenuBar({
             <span className="battery-level" />
           </span>
         </span>
-        <span className="menubar-status">
+        <button className="menubar-status" onClick={onSearch} aria-label="検索" title="検索 (⌘K)">
           <Search />
-        </span>
+        </button>
         <span className="menubar-status">
           <SlidersHorizontal />
         </span>
         <MenuClock />
       </div>
     </header>
+  )
+}
+
+function MobileBar({
+  workspace,
+  sectionLabel,
+  onSearch,
+  onAdmin,
+  isAdmin,
+}: {
+  workspace: Workspace | null
+  sectionLabel: string
+  onSearch: () => void
+  onAdmin: () => void
+  isAdmin: boolean
+}) {
+  return (
+    <header className="mobile-bar">
+      <div className="mobile-bar-titles">
+        <span className="mobile-bar-workspace">{workspace?.name || 'Marmo Lake'}</span>
+        <span className="mobile-bar-section">{sectionLabel}</span>
+      </div>
+      <div className="mobile-bar-actions">
+        <button className="round-button" onClick={onSearch} aria-label="検索">
+          <Search />
+        </button>
+        <button className="round-button" onClick={onAdmin} aria-label={isAdmin ? 'スタッフ画面' : '管理'}>
+          {isAdmin ? <Home /> : <Lock />}
+        </button>
+      </div>
+    </header>
+  )
+}
+
+type SearchHit = {
+  id: string
+  title: string
+  subtitle: string
+  group: string
+  tint: string
+  icon: ReactElement
+  target: ActivePane
+}
+
+function CommandPalette({
+  data,
+  onClose,
+  onSelect,
+}: {
+  data: AppData
+  onClose: () => void
+  onSelect: (target: ActivePane) => void
+}) {
+  const [query, setQuery] = useState('')
+  const [cursor, setCursor] = useState(0)
+
+  const hits = useMemo<SearchHit[]>(() => {
+    const all: SearchHit[] = []
+    standardApps.forEach((app) =>
+      all.push({
+        id: `app-${app.key}`,
+        title: app.label,
+        subtitle: '標準アプリ',
+        group: 'アプリ',
+        tint: app.tint,
+        icon: app.icon,
+        target: { type: 'standard', key: app.key },
+      }),
+    )
+    data.workApps.forEach((app) =>
+      all.push({
+        id: `work-${app.id}`,
+        title: app.name,
+        subtitle: app.category || '業務画面',
+        group: '業務画面',
+        tint: 'graphite',
+        icon: icons[app.icon] || <Briefcase />,
+        target: { type: 'work-app', app },
+      }),
+    )
+    data.notes.forEach((note) =>
+      all.push({
+        id: `note-${note.id}`,
+        title: note.title,
+        subtitle: note.body,
+        group: 'メモ',
+        tint: 'yellow',
+        icon: <MessageSquare />,
+        target: { type: 'standard', key: 'notes' },
+      }),
+    )
+    data.announcements.forEach((item) =>
+      all.push({
+        id: `ann-${item.id}`,
+        title: item.title,
+        subtitle: item.body,
+        group: 'お知らせ',
+        tint: 'red',
+        icon: <Bell />,
+        target: { type: 'standard', key: 'announcements' },
+      }),
+    )
+    data.checklists.forEach((item) =>
+      all.push({
+        id: `chk-${item.id}`,
+        title: item.title,
+        subtitle: `${item.items.length}項目`,
+        group: 'チェック',
+        tint: 'orange',
+        icon: <ClipboardList />,
+        target: { type: 'standard', key: 'checklists' },
+      }),
+    )
+    data.files.forEach((file) =>
+      all.push({
+        id: `file-${file.id}`,
+        title: file.name,
+        subtitle: file.category || '書類',
+        group: '書類棚',
+        tint: 'teal',
+        icon: <FileText />,
+        target: { type: 'standard', key: 'files' },
+      }),
+    )
+
+    const q = query.trim().toLowerCase()
+    if (!q) return all.filter((hit) => hit.group === 'アプリ' || hit.group === '業務画面')
+    return all.filter(
+      (hit) => hit.title.toLowerCase().includes(q) || hit.subtitle.toLowerCase().includes(q),
+    )
+  }, [data, query])
+
+  useEffect(() => {
+    setCursor(0)
+  }, [query])
+
+  const onKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setCursor((c) => Math.min(c + 1, hits.length - 1))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setCursor((c) => Math.max(c - 1, 0))
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      const hit = hits[cursor]
+      if (hit) onSelect(hit.target)
+    }
+  }
+
+  return (
+    <div className="palette-overlay" onMouseDown={onClose}>
+      <div className="palette" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="palette-input">
+          <Search />
+          <input
+            autoFocus
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="アプリ・メモ・お知らせ・チェック・書類を検索"
+          />
+          <kbd>esc</kbd>
+        </div>
+        <div className="palette-results">
+          {hits.length === 0 && <div className="palette-empty">該当する項目がありません</div>}
+          {hits.map((hit, index) => (
+            <button
+              key={hit.id}
+              className={index === cursor ? 'palette-row active' : 'palette-row'}
+              onMouseEnter={() => setCursor(index)}
+              onClick={() => onSelect(hit.target)}
+            >
+              <span className={`sidebar-badge tint-${hit.tint}`}>{hit.icon}</span>
+              <span className="palette-text">
+                <span className="palette-title">{hit.title}</span>
+                {hit.subtitle && <span className="palette-sub">{hit.subtitle}</span>}
+              </span>
+              <span className="palette-group">{hit.group}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -309,14 +540,14 @@ function Dock({
             <span className={activeKey === app.key ? 'dock-dot on' : 'dock-dot'} />
           </button>
         ))}
-        <span className="dock-sep" />
-        <button className="dock-item" data-label="更新" onClick={onRefresh} aria-label="更新">
+        <span className="dock-sep dock-extra" />
+        <button className="dock-item dock-extra" data-label="更新" onClick={onRefresh} aria-label="更新">
           <span className="dock-icon tint-graphite">
             <RefreshCw />
           </span>
           <span className="dock-dot" />
         </button>
-        <button className="dock-item" data-label="管理" onClick={onAdmin} aria-label="管理">
+        <button className="dock-item dock-extra" data-label="管理" onClick={onAdmin} aria-label="管理">
           <span className="dock-icon tint-graphite">
             <Settings />
           </span>

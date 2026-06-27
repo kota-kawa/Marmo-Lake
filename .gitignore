@@ -25,3 +25,6 @@ data/backups/*
 !.env.example
 
 *.tsbuildinfo
+
+# local screenshot helpers (Claude dev loop)
+/.shot*.mjs
