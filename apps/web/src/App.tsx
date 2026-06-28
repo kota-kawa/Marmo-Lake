@@ -3,19 +3,28 @@ import {
   Bell,
   Bot,
   Briefcase,
+  Calculator,
+  Calendar,
+  Camera,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Circle,
   ClipboardList,
+  Clock as ClockIcon,
+  Cloud,
+  CloudSun,
   Database,
   ExternalLink,
   FileText,
   FolderClosed,
+  HardDrive,
   Home,
   ListChecks,
   Lock,
   LogOut,
+  Mail,
+  MapPin,
   Megaphone,
   MessageSquare,
   MoreHorizontal,
@@ -26,6 +35,7 @@ import {
   Settings,
   Sparkles,
   StickyNote,
+  Sun,
   Upload,
   Wifi,
   X,
@@ -208,8 +218,6 @@ export function App() {
             open={(pane) => setActivePane(pane)}
             onSearch={() => setPaletteOpen(true)}
             onAdmin={() => setView('admin-login')}
-            reload={loadData}
-            showToast={showToast}
           />
         )}
 
@@ -273,39 +281,32 @@ function HomeScreen({
   open,
   onSearch,
   onAdmin,
-  reload,
-  showToast,
 }: {
   data: AppData
   open: (pane: ActivePane) => void
   onSearch: () => void
   onAdmin: () => void
-  reload: () => Promise<void>
-  showToast: (message: string) => void
 }) {
   return (
     <div className="os-scroll">
       <div className="home">
         <div className="home-col left">
           <LauncherGrid open={open} onSearch={onSearch} />
-          <MyAppsWidget apps={data.workApps} open={open} onAdmin={onAdmin} />
+          <FavoritesWidget apps={data.workApps} open={open} onSearch={onSearch} />
         </div>
 
         <div className="home-col center">
           <Clock />
           <AssistantOrb providers={data.providers} data={data} onOpenAI={() => open({ type: 'standard', key: 'ai' })} />
-          <RecentFilesWidget files={data.files} onMore={() => open({ type: 'standard', key: 'files' })} />
         </div>
 
         <div className="home-col right">
-          <AnnouncementsWidget announcements={data.announcements} onMore={() => open({ type: 'standard', key: 'announcements' })} />
-          <ChecksWidget
-            checklists={data.checklists}
-            reload={reload}
-            showToast={showToast}
-            onMore={() => open({ type: 'standard', key: 'checklists' })}
-          />
-          <SystemStatusWidget data={data} onAdmin={onAdmin} />
+          <WeatherWidget />
+          <CalendarWidget />
+          <div className="home-row-bottom">
+            <RecentFilesWidget files={data.files} onMore={() => open({ type: 'standard', key: 'files' })} />
+            <SystemStatusWidget data={data} onAdmin={onAdmin} />
+          </div>
         </div>
       </div>
     </div>
@@ -445,110 +446,71 @@ function Widget({
   )
 }
 
-function AnnouncementsWidget({
-  announcements,
-  onMore,
-}: {
-  announcements: Announcement[]
-  onMore: () => void
-}) {
-  const visible = announcements.filter((a) => a.is_visible)
-  const hero = visible.find((a) => a.priority === 'important') || visible[0]
-  const rest = visible.filter((a) => a.id !== hero?.id).slice(0, 3)
+type WeatherHour = { time: string; icon: ReactElement; temp: string }
 
+const weatherHours: WeatherHour[] = [
+  { time: '14:00', icon: <Sun />, temp: '22°' },
+  { time: '15:00', icon: <Cloud />, temp: '23°' },
+  { time: '16:00', icon: <Cloud />, temp: '23°' },
+  { time: '17:00', icon: <CloudSun />, temp: '22°' },
+  { time: '18:00', icon: <Cloud />, temp: '21°' },
+]
+
+function WeatherWidget() {
   return (
-    <Widget
-      title="お知らせ"
-      onMore={onMore}
-      footer={
-        visible.length > 0 ? (
-          <button className="widget-foot" onClick={onMore}>
-            <span>すべて見る</span>
-            <ChevronRight />
-          </button>
-        ) : undefined
-      }
-    >
-      {!hero && (
-        <div className="widget-empty-block">
-          <Megaphone />
-          <span>お知らせはまだありません</span>
-        </div>
-      )}
-      {hero && (
-        <div className="announce-hero">
-          {hero.priority === 'important' && <span className="pill red">重要</span>}
-          <h3>{hero.title}</h3>
-          <p>{hero.body}</p>
-        </div>
-      )}
-      {rest.length > 0 && (
-        <div className="row-list">
-          {rest.map((item) => (
-            <button key={item.id} className="line-row" onClick={onMore}>
-              <span className={`dot ${item.priority === 'important' ? 'red' : 'blue'}`} />
-              <span className="line-main">{item.title}</span>
-              <span className="line-aside">{timeAgo(item.updated_at)}</span>
-            </button>
-          ))}
-        </div>
-      )}
+    <Widget title="天気">
+      <div className="weather-now">
+        <span className="weather-glyph">
+          <CloudSun />
+        </span>
+        <span className="weather-temp">22°</span>
+        <span className="weather-meta">
+          <span className="weather-desc">くもり時々晴れ</span>
+          <span className="weather-hl">最高 24° / 最低 15°</span>
+        </span>
+      </div>
+      <div className="weather-hours">
+        {weatherHours.map((hour) => (
+          <div className="weather-hour" key={hour.time}>
+            <span className="weather-hour-time">{hour.time}</span>
+            <span className="weather-hour-icon">{hour.icon}</span>
+            <span className="weather-hour-temp">{hour.temp}</span>
+          </div>
+        ))}
+      </div>
     </Widget>
   )
 }
 
-function ChecksWidget({
-  checklists,
-  reload,
-  showToast,
-  onMore,
-}: {
-  checklists: Checklist[]
-  reload: () => Promise<void>
-  showToast: (message: string) => void
-  onMore: () => void
-}) {
-  const list = checklists[0]
-  const items = list?.items.slice(0, 5) || []
+type CalendarEvent = { time: string; label: string; tone: string }
 
-  const toggle = async (item: ChecklistItem) => {
-    if (!list) return
-    await patchJson(`/checklists/${list.id}/items/${item.id}`, { is_done: !item.is_done })
-    await reload()
-    showToast('更新しました')
-  }
+const calendarEvents: CalendarEvent[] = [
+  { time: '10:00', label: '朝礼ミーティング', tone: 'blue' },
+  { time: '13:30', label: '在庫チェック', tone: 'purple' },
+  { time: '16:00', label: '締め作業', tone: 'green' },
+]
 
+function CalendarWidget() {
+  const today = new Intl.DateTimeFormat('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' }).format(
+    new Date(),
+  )
   return (
-    <Widget
-      title={list ? list.title : '今日のチェック'}
-      onMore={onMore}
-      footer={
-        list ? (
-          <button className="widget-foot" onClick={onMore}>
-            <span>チェックをすべて見る</span>
-            <ChevronRight />
-          </button>
-        ) : undefined
-      }
-    >
-      {!list && (
-        <div className="widget-empty-block">
-          <ListChecks />
-          <span>チェックリストはまだありません</span>
-        </div>
-      )}
-      {list && (
-        <div className="row-list">
-          {items.map((item) => (
-            <button key={item.id} className="line-row" onClick={() => void toggle(item)}>
-              <span className={item.is_done ? 'check-tick on' : 'check-tick'}>
-                {item.is_done ? <CheckCircle2 /> : <Circle />}
-              </span>
-              <span className={item.is_done ? 'line-main done' : 'line-main'}>{item.label}</span>
-            </button>
-          ))}
-        </div>
-      )}
+    <Widget title="カレンダー">
+      <div className="calendar-head">
+        <span className="calendar-glyph">
+          <Calendar />
+        </span>
+        <span className="calendar-today">{today}</span>
+      </div>
+      <div className="row-list">
+        {calendarEvents.map((event) => (
+          <div className="line-row" key={event.time}>
+            <span className="line-time">{event.time}</span>
+            <span className={`dot ${event.tone}`} />
+            <span className="line-main">{event.label}</span>
+          </div>
+        ))}
+      </div>
     </Widget>
   )
 }
@@ -643,46 +605,43 @@ function SystemStatusWidget({ data, onAdmin }: { data: AppData; onAdmin: () => v
   )
 }
 
-function MyAppsWidget({
+const defaultFavorites: { label: string; icon: ReactElement }[] = [
+  { label: '地図', icon: <MapPin /> },
+  { label: 'ドライブ', icon: <HardDrive /> },
+  { label: '電卓', icon: <Calculator /> },
+  { label: '時計', icon: <ClockIcon /> },
+  { label: 'カメラ', icon: <Camera /> },
+  { label: 'メール', icon: <Mail /> },
+]
+
+function FavoritesWidget({
   apps,
   open,
-  onAdmin,
+  onSearch,
 }: {
   apps: WorkApp[]
   open: (pane: ActivePane) => void
-  onAdmin: () => void
+  onSearch: () => void
 }) {
   const page = apps.slice(0, 6)
   return (
-    <Widget title="業務">
-      {page.length === 0 && (
-        <div className="widget-empty-block">
-          <Briefcase />
-          <span>管理画面から業務画面を追加できます</span>
-          <button className="secondary-button" onClick={onAdmin} style={{ marginTop: 6 }}>
-            追加する
-          </button>
-        </div>
-      )}
-      {page.length > 0 && (
-        <>
-          <div className="myapps-grid">
-            {page.map((app) => (
+    <section className="widget favorites">
+      <div className="myapps-grid">
+        {page.length > 0
+          ? page.map((app) => (
               <button key={app.id} className="myapp-tile" onClick={() => open({ type: 'work-app', app })}>
                 <span className="myapp-icon">{workIcons[app.icon] || <Briefcase />}</span>
                 <span className="myapp-label">{app.name}</span>
               </button>
+            ))
+          : defaultFavorites.map((app) => (
+              <button key={app.label} className="myapp-tile" onClick={onSearch}>
+                <span className="myapp-icon">{app.icon}</span>
+                <span className="myapp-label">{app.label}</span>
+              </button>
             ))}
-          </div>
-          {apps.length > 6 && (
-            <div className="dots">
-              <i className="on" />
-              <i />
-            </div>
-          )}
-        </>
-      )}
-    </Widget>
+      </div>
+    </section>
   )
 }
 

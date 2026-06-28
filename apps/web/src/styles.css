@@ -13,15 +13,17 @@
   --screen-1: #f6f8fc;
   --screen-2: #eef1f8;
 
-  --ink: #353c4e;
-  --ink-strong: #2a3142;
-  --ink-2: #7b8398;
-  --ink-3: #aab1c4;
+  --ink: #2c3445;
+  --ink-strong: #222838;
+  --ink-2: #4a566d;
+  --ink-3: #67718a;
 
-  --card: #ffffff;
-  --card-2: #fbfcfe;
-  --line: rgba(53, 64, 99, 0.08);
-  --line-strong: rgba(53, 64, 99, 0.14);
+  --card: linear-gradient(150deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.2));
+  --card-2: linear-gradient(150deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.14));
+  --line: rgba(70, 86, 122, 0.16);
+  --line-strong: rgba(70, 86, 122, 0.24);
+  --glass-edge: rgba(255, 255, 255, 0.6);
+  --glass-blur: saturate(1.8) blur(22px);
 
   --accent: #4f7cf7;
   --accent-strong: #3f6bea;
@@ -43,9 +45,9 @@
   --tint-green: #34c77b;
   --tint-graphite: #8a91a6;
 
-  --shadow-card: 0 1px 2px rgba(40, 50, 90, 0.04), 0 14px 34px -16px rgba(40, 50, 90, 0.22);
-  --shadow-soft: 0 1px 2px rgba(40, 50, 90, 0.05), 0 6px 16px -10px rgba(40, 50, 90, 0.18);
-  --shadow-pop: 0 24px 60px -18px rgba(40, 50, 90, 0.4), 0 2px 8px rgba(40, 50, 90, 0.12);
+  --shadow-card: inset 0 1px 0 var(--glass-edge), 0 12px 34px -16px rgba(8, 30, 55, 0.5);
+  --shadow-soft: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 6px 16px -10px rgba(8, 30, 55, 0.4);
+  --shadow-pop: inset 0 1px 0 var(--glass-edge), 0 28px 64px -18px rgba(6, 24, 48, 0.6);
 
   --radius-screen: 30px;
   --radius-card: 22px;
@@ -102,11 +104,10 @@ svg {
   position: fixed;
   inset: 0;
   overflow: hidden;
-  padding: 18px;
+  padding: 0;
   background:
-    radial-gradient(120% 90% at 12% 8%, #f1f3fb 0%, transparent 55%),
-    radial-gradient(120% 110% at 95% 100%, #e7ebf6 0%, transparent 50%),
-    linear-gradient(150deg, var(--bg-1), var(--bg-2));
+    linear-gradient(160deg, rgba(16, 42, 74, 0.28), rgba(8, 26, 50, 0.42)),
+    url('/wallpaper.png') center / cover no-repeat;
 }
 
 .os-screen {
@@ -114,13 +115,10 @@ svg {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  border-radius: var(--radius-screen);
-  background: linear-gradient(160deg, var(--screen-1), var(--screen-2));
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 0 rgba(255, 255, 255, 0.6),
-    0 30px 60px -30px rgba(40, 50, 90, 0.25);
+  border-radius: 0;
+  background: url('/wallpaper.png') center / cover no-repeat;
+  border: 0;
+  box-shadow: none;
 }
 
 .os-scroll {
@@ -136,7 +134,8 @@ svg {
 /* ===== Home launcher ===== */
 .home {
   display: grid;
-  grid-template-columns: minmax(260px, 0.95fr) minmax(340px, 1.15fr) minmax(290px, 0.92fr);
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, 0.88fr) minmax(280px, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   gap: clamp(16px, 2.2vw, 26px);
   align-items: start;
   padding: clamp(18px, 3vh, 38px) clamp(24px, 2.6vw, 42px);
@@ -154,7 +153,18 @@ svg {
 
 .home-col.center {
   align-items: center;
-  gap: clamp(12px, 1.6vh, 22px);
+  justify-content: center;
+  align-self: stretch;
+  position: relative;
+  gap: 0;
+}
+
+.home-col.center .clock {
+  position: absolute;
+  top: clamp(6px, 2vh, 26px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding-top: 0;
 }
 
 /* App launcher grid */
@@ -186,9 +196,12 @@ svg {
   width: 64px;
   height: 64px;
   border-radius: 19px;
-  background: var(--card);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.16));
+  border: 1px solid var(--glass-edge);
   color: var(--accent);
   box-shadow: var(--shadow-soft);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   transition: box-shadow 0.18s var(--ease);
 }
 
@@ -204,8 +217,9 @@ svg {
 
 .launch-label {
   font-size: 12.5px;
-  font-weight: 500;
-  color: var(--ink-2);
+  font-weight: 600;
+  color: rgba(240, 246, 255, 0.95);
+  text-shadow: 0 1px 8px rgba(6, 24, 48, 0.55);
   letter-spacing: 0.1px;
 }
 
@@ -248,14 +262,16 @@ svg {
   font-weight: 200;
   letter-spacing: -2px;
   line-height: 0.95;
-  color: var(--ink-strong);
+  color: #f4f8ff;
+  text-shadow: 0 2px 24px rgba(6, 24, 48, 0.5), 0 1px 2px rgba(6, 24, 48, 0.3);
   font-variant-numeric: tabular-nums;
 }
 
 .clock-date {
   font-size: clamp(14px, 1.6vh, 16px);
-  font-weight: 500;
-  color: var(--ink-2);
+  font-weight: 600;
+  color: rgba(238, 245, 255, 0.92);
+  text-shadow: 0 1px 10px rgba(6, 24, 48, 0.5);
   letter-spacing: 0.2px;
 }
 
@@ -269,13 +285,15 @@ svg {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(circle at 50% 38%, #ffffff 0%, #f4f7fe 64%, #eaf0fd 100%);
+    radial-gradient(circle at 50% 35%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.34) 58%, rgba(214, 234, 255, 0.26) 100%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   box-shadow:
-    inset 0 1px 2px rgba(255, 255, 255, 0.9),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
-    0 0 0 1px var(--accent-ring),
-    0 24px 50px -20px rgba(79, 124, 247, 0.5),
-    0 6px 18px -10px rgba(40, 50, 90, 0.18);
+    inset 0 1px 2px rgba(255, 255, 255, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 30px 60px -22px rgba(6, 24, 48, 0.55),
+    0 6px 18px -10px rgba(6, 24, 48, 0.3);
 }
 
 .orb::before {
@@ -336,9 +354,11 @@ svg {
   width: 74%;
   padding: 7px 8px 7px 16px;
   border-radius: 999px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  box-shadow: 0 8px 22px -10px rgba(40, 50, 90, 0.28);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 8px 22px -10px rgba(6, 24, 48, 0.4);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .orb-input input {
@@ -399,8 +419,10 @@ svg {
   padding: clamp(14px, 1.8vh, 20px) 22px;
   border-radius: var(--radius-card);
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .widget-head {
@@ -496,6 +518,123 @@ svg {
   overflow: hidden;
 }
 
+/* Weather widget */
+.weather-now {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: clamp(10px, 1.4vh, 14px);
+}
+
+.weather-glyph {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  border-radius: 16px;
+  color: var(--amber);
+  background: linear-gradient(150deg, rgba(245, 166, 35, 0.16), rgba(79, 124, 247, 0.1));
+}
+
+.weather-glyph svg {
+  width: 28px;
+  height: 28px;
+}
+
+.weather-temp {
+  font-size: clamp(30px, 4vh, 38px);
+  font-weight: 300;
+  line-height: 1;
+  color: var(--ink-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-meta {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.weather-desc {
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--ink);
+}
+
+.weather-hl {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.weather-hours {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  padding-top: clamp(10px, 1.4vh, 14px);
+  border-top: 1px solid var(--line);
+}
+
+.weather-hour {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.weather-hour-time {
+  font-size: 11.5px;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.weather-hour-icon {
+  display: grid;
+  place-items: center;
+  color: var(--ink-3);
+}
+
+.weather-hour-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.weather-hour-temp {
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Calendar widget */
+.calendar-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: clamp(6px, 1vh, 10px);
+}
+
+.calendar-glyph {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.calendar-glyph svg {
+  width: 17px;
+  height: 17px;
+}
+
+.calendar-today {
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--ink);
+}
+
 .pill {
   display: inline-flex;
   align-items: center;
@@ -522,7 +661,7 @@ svg {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 11px 2px;
+  padding: clamp(8px, 1.2vh, 11px) 2px;
   border-top: 1px solid var(--line);
   font-size: 13.5px;
   color: var(--ink);
@@ -666,7 +805,7 @@ svg {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 2px;
+  padding: clamp(8px, 1.2vh, 12px) 2px;
   border-top: 1px solid var(--line);
   font-size: 13.5px;
 }
@@ -701,6 +840,10 @@ svg {
   position: relative;
 }
 
+.favorites {
+  padding: clamp(16px, 2vh, 22px) 20px;
+}
+
 .myapps-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -728,10 +871,12 @@ svg {
   width: 54px;
   height: 54px;
   border-radius: 16px;
-  background: var(--card-2);
-  border: 1px solid var(--line);
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.14));
+  border: 1px solid var(--glass-edge);
   color: var(--accent);
   box-shadow: var(--shadow-soft);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .myapp-icon svg {
@@ -741,8 +886,9 @@ svg {
 
 .myapp-label {
   font-size: 12px;
-  font-weight: 500;
-  color: var(--ink-2);
+  font-weight: 600;
+  color: var(--ink);
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.55);
   max-width: 80px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -770,8 +916,12 @@ svg {
 .home-row-bottom {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 22px;
+  gap: clamp(12px, 1.4vw, 18px);
   align-items: start;
+}
+
+.home-row-bottom .widget {
+  padding: clamp(13px, 1.6vh, 18px) 16px;
 }
 
 /* Floating settings FAB */
@@ -831,9 +981,10 @@ svg {
   flex: 0 0 auto;
   height: 68px;
   padding: 0 28px;
-  border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.5);
-  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--glass-edge);
+  background: rgba(255, 255, 255, 0.42);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .frame-back {
@@ -843,9 +994,11 @@ svg {
   height: 38px;
   border-radius: 12px;
   color: var(--ink-2);
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-soft);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   transition: color 0.12s ease, transform 0.06s ease;
 }
 
@@ -892,6 +1045,9 @@ svg {
   display: flex;
   flex: 1;
   min-height: 0;
+  background: rgba(247, 250, 255, 0.4);
+  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
 }
 
 .frame-nav {
@@ -917,9 +1073,11 @@ svg {
   height: 38px;
   border-radius: 12px;
   color: var(--ink-2);
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-soft);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   transition: color 0.12s ease;
 }
 
@@ -1018,8 +1176,10 @@ svg {
   padding: 20px;
   border-radius: var(--radius-card);
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .content-card h2 {
@@ -1058,8 +1218,10 @@ svg {
   min-height: 124px;
   border-radius: var(--radius-card);
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   color: var(--ink);
   text-align: left;
   transition: transform 0.15s var(--ease), box-shadow 0.15s var(--ease);
@@ -1132,8 +1294,11 @@ svg {
   width: 100%;
   text-align: center;
   color: var(--ink-2);
+  background: rgba(255, 255, 255, 0.32);
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .empty-state svg {
@@ -1219,12 +1384,14 @@ textarea {
   width: 100%;
   min-height: 40px;
   padding: 9px 12px;
-  background: var(--card);
+  background: rgba(255, 255, 255, 0.5);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-control);
   font-size: 14px;
   outline: none;
   color: var(--ink);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 
@@ -1342,7 +1509,9 @@ select {
   padding: 18px;
   background: var(--card-2);
   border-radius: var(--radius-card);
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-edge);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .admin-form.vertical {
@@ -1357,9 +1526,11 @@ select {
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-card);
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-edge);
   overflow: hidden;
   background: var(--card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .admin-row {
@@ -1411,8 +1582,10 @@ select {
   padding: 18px;
   border-radius: var(--radius-card);
   background: var(--card);
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .ai-row {
@@ -1443,9 +1616,11 @@ select {
   width: min(560px, calc(100vw - 40px));
   padding: 34px 36px 30px;
   border-radius: 26px;
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
 }
 
 .setup-card {
@@ -1515,8 +1690,8 @@ select {
   gap: 8px;
   padding: 18px;
   border-radius: var(--radius-card);
-  background: var(--card-2);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.32);
+  border: 1px solid var(--glass-edge);
 }
 
 /* Login */
@@ -1564,7 +1739,8 @@ select {
 
 .splash h1 {
   margin: 0;
-  color: var(--ink-strong);
+  color: #f4f8ff;
+  text-shadow: 0 2px 18px rgba(6, 24, 48, 0.55);
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.4px;
@@ -1653,9 +1829,11 @@ select {
   display: flex;
   flex-direction: column;
   border-radius: 22px;
-  background: var(--card);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--glass-edge);
   box-shadow: var(--shadow-pop);
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
   overflow: hidden;
   animation: palette-pop 0.16s var(--ease);
 }
@@ -1807,19 +1985,35 @@ select {
 
 /* ===== Responsive ===== */
 @media (max-width: 1180px) {
+  .os-scroll {
+    overflow: auto;
+  }
   .home {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto;
     grid-template-areas:
       'apps center'
       'side side';
     gap: 22px;
     padding: 30px 30px 40px;
+    height: auto;
+    min-height: 100%;
+    overflow: visible;
   }
   .home-col.left {
     grid-area: apps;
   }
   .home-col.center {
     grid-area: center;
+    align-self: auto;
+    justify-content: flex-start;
+    position: static;
+    gap: clamp(12px, 1.6vh, 22px);
+  }
+  .home-col.center .clock {
+    position: static;
+    transform: none;
+    padding-top: clamp(2px, 1vh, 12px);
   }
   .home-col.right {
     grid-area: side;
