@@ -1,33 +1,29 @@
 import {
   Archive,
   Bell,
+  BookOpen,
   Bot,
   Briefcase,
-  Calculator,
   Calendar,
-  Camera,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Circle,
   ClipboardList,
-  Clock as ClockIcon,
   Cloud,
   CloudSun,
   Database,
   ExternalLink,
   FileText,
   FolderClosed,
-  HardDrive,
   Home,
   ListChecks,
   Lock,
   LogOut,
-  Mail,
-  MapPin,
   Megaphone,
   MessageSquare,
   MoreHorizontal,
+  Pin,
   Plus,
   RefreshCw,
   Search,
@@ -57,7 +53,9 @@ import type {
 } from './types'
 
 type View = 'staff' | 'admin-login' | 'admin'
-type StandardApp = 'notes' | 'announcements' | 'checklists' | 'files' | 'ai'
+type StandardApp = 'notes' | 'announcements' | 'checklists' | 'files' | 'manuals' | 'ai'
+
+const MANUAL_CATEGORY = 'マニュアル'
 type ActivePane =
   | { type: 'home' }
   | { type: 'standard'; key: StandardApp }
@@ -90,6 +88,7 @@ const standardApps: StandardDef[] = [
   { key: 'announcements', label: 'お知らせ', icon: <Megaphone />, tint: 'ic-orange' },
   { key: 'checklists', label: 'チェック', icon: <ListChecks />, tint: 'ic-green' },
   { key: 'files', label: '書類棚', icon: <FolderClosed />, tint: 'ic-teal' },
+  { key: 'manuals', label: 'マニュアル', icon: <BookOpen />, tint: 'ic-yellow' },
   { key: 'ai', label: 'AI', icon: <Sparkles />, tint: 'ic-purple' },
 ]
 
@@ -292,7 +291,7 @@ function HomeScreen({
       <div className="home">
         <div className="home-col left">
           <LauncherGrid open={open} onSearch={onSearch} />
-          <FavoritesWidget apps={data.workApps} open={open} onSearch={onSearch} />
+          <FavoritesWidget apps={data.workApps} open={open} onAdmin={onAdmin} />
         </div>
 
         <div className="home-col center">
@@ -605,42 +604,36 @@ function SystemStatusWidget({ data, onAdmin }: { data: AppData; onAdmin: () => v
   )
 }
 
-const defaultFavorites: { label: string; icon: ReactElement }[] = [
-  { label: '地図', icon: <MapPin /> },
-  { label: 'ドライブ', icon: <HardDrive /> },
-  { label: '電卓', icon: <Calculator /> },
-  { label: '時計', icon: <ClockIcon /> },
-  { label: 'カメラ', icon: <Camera /> },
-  { label: 'メール', icon: <Mail /> },
-]
-
 function FavoritesWidget({
   apps,
   open,
-  onSearch,
+  onAdmin,
 }: {
   apps: WorkApp[]
   open: (pane: ActivePane) => void
-  onSearch: () => void
+  onAdmin: () => void
 }) {
   const page = apps.slice(0, 6)
   return (
     <section className="widget favorites">
-      <div className="myapps-grid">
-        {page.length > 0
-          ? page.map((app) => (
-              <button key={app.id} className="myapp-tile" onClick={() => open({ type: 'work-app', app })}>
-                <span className="myapp-icon">{workIcons[app.icon] || <Briefcase />}</span>
-                <span className="myapp-label">{app.name}</span>
-              </button>
-            ))
-          : defaultFavorites.map((app) => (
-              <button key={app.label} className="myapp-tile" onClick={onSearch}>
-                <span className="myapp-icon">{app.icon}</span>
-                <span className="myapp-label">{app.label}</span>
-              </button>
-            ))}
-      </div>
+      {page.length > 0 ? (
+        <div className="myapps-grid">
+          {page.map((app) => (
+            <button key={app.id} className="myapp-tile" onClick={() => open({ type: 'work-app', app })}>
+              <span className="myapp-icon">{workIcons[app.icon] || <Briefcase />}</span>
+              <span className="myapp-label">{app.name}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="dock-empty">
+          <Pin />
+          <p>よく使う業務画面をここに固定できます</p>
+          <button className="secondary-button" onClick={onAdmin}>
+            管理者設定で追加
+          </button>
+        </div>
+      )}
     </section>
   )
 }
@@ -714,6 +707,10 @@ function StaffScreen({
     announcements: { title: 'お知らせ', subtitle: `${data.announcements.length}件` },
     checklists: { title: 'チェック', subtitle: `${data.checklists.length}件` },
     files: { title: '書類棚', subtitle: `${data.files.length}件` },
+    manuals: {
+      title: 'マニュアル',
+      subtitle: `${data.files.filter((file) => file.category === MANUAL_CATEGORY).length}件`,
+    },
     ai: { title: 'AI アシスタント', subtitle: '' },
   }
 
@@ -737,6 +734,7 @@ function StaffScreen({
       {key === 'announcements' && <AnnouncementsPane announcements={data.announcements} />}
       {key === 'checklists' && <ChecklistPane checklists={data.checklists} reload={reload} showToast={showToast} />}
       {key === 'files' && <FilesPane files={data.files} />}
+      {key === 'manuals' && <ManualsPane files={data.files} />}
       {key === 'ai' && (
         <AIHelp
           providers={data.providers}
@@ -864,6 +862,31 @@ function FilesPane({ files }: { files: FileItem[] }) {
             </span>
             <strong>{file.name}</strong>
             <span className="tile-sub">{file.category || timeAgo(file.updated_at)}</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ManualsPane({ files }: { files: FileItem[] }) {
+  const manuals = files.filter((file) => file.category === MANUAL_CATEGORY)
+  return (
+    <div className="pane">
+      {manuals.length === 0 && (
+        <div className="empty-state">
+          <BookOpen />
+          <p>マニュアルはまだありません。管理者画面の「書類」からカテゴリ「マニュアル」で登録できます。</p>
+        </div>
+      )}
+      <div className="app-grid">
+        {manuals.map((file) => (
+          <a className="tile" href={`/api/files/${file.id}`} target="_blank" rel="noreferrer" key={file.id}>
+            <span className="tile-glyph">
+              <BookOpen />
+            </span>
+            <strong>{file.name}</strong>
+            <span className="tile-sub">{timeAgo(file.updated_at)}</span>
           </a>
         ))}
       </div>
@@ -1618,6 +1641,7 @@ function AdminChecks({ data, reload, showToast }: AdminProps) {
 
 function AdminFiles({ data, reload, showToast }: AdminProps) {
   const [file, setFile] = useState<File | null>(null)
+  const [category, setCategory] = useState('書類')
   return (
     <div className="pane">
       <form
@@ -1627,13 +1651,20 @@ function AdminFiles({ data, reload, showToast }: AdminProps) {
           if (!file) return
           const body = new FormData()
           body.append('upload', file)
-          await apiFetch('/files/upload?category=書類&is_staff_visible=true', { method: 'POST', body })
+          await apiFetch(`/files/upload?category=${encodeURIComponent(category)}&is_staff_visible=true`, {
+            method: 'POST',
+            body,
+          })
           setFile(null)
           await reload()
           showToast('アップロードしました')
         }}
       >
         <input type="file" onChange={(event) => setFile(event.target.files?.[0] || null)} />
+        <select value={category} onChange={(event) => setCategory(event.target.value)}>
+          <option value="書類">書類</option>
+          <option value={MANUAL_CATEGORY}>マニュアル</option>
+        </select>
         <button className="primary-button">
           <Upload /> 登録
         </button>

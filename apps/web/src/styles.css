@@ -15,15 +15,15 @@
 
   --ink: #2c3445;
   --ink-strong: #222838;
-  --ink-2: #4a566d;
-  --ink-3: #67718a;
+  --ink-2: #414d66;
+  --ink-3: #57627d;
 
-  --card: linear-gradient(150deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.2));
-  --card-2: linear-gradient(150deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.14));
+  --card: linear-gradient(150deg, rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.52));
+  --card-2: linear-gradient(150deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.4));
   --line: rgba(70, 86, 122, 0.16);
   --line-strong: rgba(70, 86, 122, 0.24);
   --glass-edge: rgba(255, 255, 255, 0.6);
-  --glass-blur: saturate(1.8) blur(22px);
+  --glass-blur: blur(26px) saturate(1.35) brightness(1.06);
 
   --accent: #4f7cf7;
   --accent-strong: #3f6bea;
@@ -116,7 +116,9 @@ svg {
   width: 100%;
   overflow: hidden;
   border-radius: 0;
-  background: url('/wallpaper.png') center / cover no-repeat;
+  background:
+    linear-gradient(160deg, rgba(16, 42, 74, 0.18), rgba(8, 26, 50, 0.3)),
+    url('/wallpaper.png') center / cover no-repeat;
   border: 0;
   box-shadow: none;
 }
@@ -149,6 +151,24 @@ svg {
   gap: clamp(14px, 2vh, 22px);
   min-width: 0;
   min-height: 0;
+}
+
+.home-col.left {
+  align-self: stretch;
+}
+
+/* Launcher area grows downward as apps are added; favorites stay docked at the bottom */
+.home-col.left .launch-grid {
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+  grid-auto-rows: max-content;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.home-col.left .launch-grid::-webkit-scrollbar {
+  display: none;
 }
 
 .home-col.center {
@@ -895,6 +915,25 @@ svg {
   white-space: nowrap;
 }
 
+.dock-empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 14px 10px;
+  text-align: center;
+}
+
+.dock-empty svg {
+  width: 26px;
+  height: 26px;
+  color: var(--ink-3);
+}
+
+.dock-empty p {
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
 .dots {
   display: flex;
   justify-content: center;
@@ -1045,9 +1084,9 @@ svg {
   display: flex;
   flex: 1;
   min-height: 0;
-  background: rgba(247, 250, 255, 0.4);
-  backdrop-filter: blur(14px) saturate(1.3);
-  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  background: rgba(247, 250, 255, 0.58);
+  backdrop-filter: blur(18px) saturate(1.25) brightness(1.04);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25) brightness(1.04);
 }
 
 .frame-nav {
@@ -1294,7 +1333,7 @@ svg {
   width: 100%;
   text-align: center;
   color: var(--ink-2);
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.5);
   border: 1px dashed var(--line-strong);
   border-radius: var(--radius-card);
   backdrop-filter: var(--glass-blur);
@@ -1690,7 +1729,7 @@ select {
   gap: 8px;
   padding: 18px;
   border-radius: var(--radius-card);
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.45);
   border: 1px solid var(--glass-edge);
 }
 
@@ -2002,6 +2041,11 @@ select {
   }
   .home-col.left {
     grid-area: apps;
+    align-self: auto;
+  }
+  .home-col.left .launch-grid {
+    flex: none;
+    overflow: visible;
   }
   .home-col.center {
     grid-area: center;
@@ -2069,6 +2113,28 @@ select {
   }
   .myapps-grid {
     grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ===== backdrop-filter fallback ===== */
+@supports not (backdrop-filter: blur(1px)) {
+  .widget,
+  .content-card,
+  .tile,
+  .sheet,
+  .palette,
+  .admin-form,
+  .admin-list,
+  .ai-box {
+    background: rgba(248, 250, 255, 0.92);
+  }
+  .frame-bar,
+  .frame-body {
+    background: rgba(248, 250, 255, 0.88);
+  }
+  .empty-state,
+  .inline-panel {
+    background: rgba(248, 250, 255, 0.85);
   }
 }
 
