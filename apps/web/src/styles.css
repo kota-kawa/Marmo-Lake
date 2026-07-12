@@ -856,10 +856,6 @@ svg {
 }
 
 /* My Apps card */
-.myapps {
-  position: relative;
-}
-
 .favorites {
   padding: clamp(16px, 2vh, 22px) 20px;
 }
@@ -961,32 +957,6 @@ svg {
 
 .home-row-bottom .widget {
   padding: clamp(13px, 1.6vh, 18px) 16px;
-}
-
-/* Floating settings FAB */
-.fab {
-  position: absolute;
-  right: -14px;
-  bottom: -14px;
-  display: grid;
-  place-items: center;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  color: #fff;
-  background: linear-gradient(150deg, #6d9bff, var(--accent));
-  box-shadow: 0 12px 26px -8px rgba(79, 124, 247, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  transition: transform 0.16s var(--ease), filter 0.12s ease;
-}
-
-.fab svg {
-  width: 22px;
-  height: 22px;
-}
-
-.fab:hover {
-  filter: brightness(1.05);
-  transform: rotate(35deg);
 }
 
 .widget-empty-block {

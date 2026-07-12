@@ -563,7 +563,7 @@ function RecentFilesWidget({ files, onMore }: { files: FileItem[]; onMore: () =>
 function SystemStatusWidget({ data, onAdmin }: { data: AppData; onAdmin: () => void }) {
   const aiReady = data.providers.some((p) => p.is_enabled)
   return (
-    <Widget title="接続状態" className="myapps">
+    <Widget title="接続状態">
       <div>
         <div className="stat-row">
           <span className="stat-ico">
@@ -596,9 +596,6 @@ function SystemStatusWidget({ data, onAdmin }: { data: AppData; onAdmin: () => v
       <button className="widget-foot" onClick={onAdmin}>
         <span>設定・管理</span>
         <ChevronRight />
-      </button>
-      <button className="fab" onClick={onAdmin} aria-label="設定">
-        <Settings />
       </button>
     </Widget>
   )
