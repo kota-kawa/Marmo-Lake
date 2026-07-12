@@ -26,7 +26,7 @@ class SetupCreate(BaseModel):
     admin_name: str = Field(min_length=1, max_length=80)
     admin_password: str = Field(min_length=8, max_length=200)
     workspace_name: str = Field(min_length=1, max_length=100)
-    use_case: Literal["store", "classroom", "office", "community", "empty"] = "store"
+    use_case: Literal["store", "classroom", "office", "community", "personal", "empty"] = "store"
     ai_provider: AIProviderSetup | None = None
 
 

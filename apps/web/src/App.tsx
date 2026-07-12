@@ -1299,6 +1299,7 @@ function SetupWizard({ onComplete }: { onComplete: () => void }) {
               <option value="classroom">教室</option>
               <option value="office">小規模オフィス</option>
               <option value="community">地域団体</option>
+              <option value="personal">個人</option>
               <option value="empty">空で開始</option>
             </select>
           </label>

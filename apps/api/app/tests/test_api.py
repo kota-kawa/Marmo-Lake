@@ -59,6 +59,25 @@ def test_setup_locks_and_creates_initial_workspace(client: TestClient) -> None:
     assert client.get("/api/checklists").json()
 
 
+def test_setup_with_personal_use_case_seeds_personal_content(client: TestClient) -> None:
+    response = client.post(
+        "/api/setup",
+        json={
+            "admin_name": "自分",
+            "admin_password": "strong-pass-123",
+            "workspace_name": "My Lake",
+            "use_case": "personal",
+        },
+    )
+    assert response.status_code == 201, response.text
+    workspace = client.get("/api/workspace").json()
+    assert workspace["use_case"] == "personal"
+    notes = client.get("/api/notes").json()
+    assert notes[0]["title"] == "マイメモ"
+    checklists = client.get("/api/checklists").json()
+    assert checklists[0]["title"] == "今日やること"
+
+
 def test_admin_can_create_work_app_and_staff_can_read_it(client: TestClient) -> None:
     token = setup_workspace(client)
     response = client.post(
