@@ -355,6 +355,7 @@ function AssistantOrb({
   const [message, setMessage] = useState('')
   const [reply, setReply] = useState('')
   const [busy, setBusy] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const provider = providers.find((item) => item.is_default && item.is_enabled) || providers[0]
 
   const contextSummary = useMemo(
@@ -387,8 +388,16 @@ function AssistantOrb({
     }
   }
 
+  const collapse = () => {
+    setExpanded(false)
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur()
+  }
+
   return (
-    <div className="orb">
+    <div className={expanded ? 'orb expanded' : 'orb'}>
+      <button type="button" className="orb-close" onClick={collapse} aria-label="閉じる" tabIndex={expanded ? 0 : -1}>
+        <X />
+      </button>
       <div className="orb-core">
         {reply ? (
           <div className="orb-reply">{reply}</div>
@@ -405,6 +414,10 @@ function AssistantOrb({
         <input
           value={message}
           onChange={(event) => setMessage(event.target.value)}
+          onFocus={() => setExpanded(true)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') collapse()
+          }}
           placeholder={provider ? 'メッセージを入力…' : 'AIを設定すると使えます'}
           aria-label="AIへメッセージ"
         />
